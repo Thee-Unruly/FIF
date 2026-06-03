@@ -96,15 +96,7 @@ function App() {
             <button className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
               <Bell size={16} className="text-slate-400" />
             </button>
-            {page !== 'overview' && (
-              <button
-                onClick={() => setShowEntry(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-              >
-                <Plus size={14} />
-                Add Record
-              </button>
-            )}
+
           </div>
         </header>
 

@@ -231,13 +231,7 @@ export default function DataEntry({ data, onRefresh }) {
                         <Download size={15} />
                         Export CSV
                     </button>
-                    <button
-                        onClick={() => { setEditRow(null); setShowModal(true) }}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
-                    >
-                        <Plus size={15} />
-                        Add Record
-                    </button>
+
                 </div>
             </div>
 
