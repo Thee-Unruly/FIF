@@ -210,6 +210,67 @@ def savings():
     return jsonify(rows)
 
 
+# In-memory store for records added via the dashboard UI
+# (persisted for the lifetime of the server process)
+_added_records = []
+
+@app.route('/api/records', methods=['GET'])
+def get_records():
+    """Return all manually added records."""
+    return jsonify(_added_records)
+
+
+@app.route('/api/records', methods=['POST'])
+def create_record():
+    """Accept a new monthly record from the dashboard and hold it in memory."""
+    body = request.get_json(force=True, silent=True)
+    if not body:
+        return jsonify({'error': 'Invalid JSON'}), 400
+
+    required = ['month', 'product']
+    for field in required:
+        if not body.get(field):
+            return jsonify({'error': f'Missing field: {field}'}), 400
+
+    record = {
+        'id':          f"{body['product']}-{body.get('segment','')}-{body['month']}",
+        'month':       str(body.get('month', '')),
+        'label':       body.get('label', body.get('month', '')),
+        'product':     body.get('product', ''),
+        'segment':     body.get('segment', ''),
+        'telco':       body.get('telco', 'All'),
+        'custBase':    float(body.get('custBase') or 0),
+        'disbVal':     float(body.get('disbVal') or 0),
+        'disbVol':     float(body.get('disbVol') or 0),
+        'avgTicket':   float(body.get('avgTicket') or 0),
+        'repayVal':    float(body.get('repayVal') or 0),
+        'repayRate':   float(body.get('repayRate') or 0),
+        'outstanding': float(body.get('outstanding') or 0),
+        'due':         float(body.get('due') or 0),
+        'mandatorySvgs': float(body.get('mandatorySvgs') or 0),
+    }
+
+    # Update existing if same id, else append
+    for i, r in enumerate(_added_records):
+        if r['id'] == record['id']:
+            _added_records[i] = record
+            return jsonify({'status': 'updated', 'record': record})
+
+    _added_records.append(record)
+    return jsonify({'status': 'created', 'record': record}), 201
+
+
+@app.route('/api/records/<record_id>', methods=['DELETE'])
+def delete_record(record_id):
+    """Delete a manually added record by id."""
+    global _added_records
+    before = len(_added_records)
+    _added_records = [r for r in _added_records if r['id'] != record_id]
+    if len(_added_records) < before:
+        return jsonify({'status': 'deleted'})
+    return jsonify({'error': 'Not found'}), 404
+
+
 if __name__ == '__main__':
     print('Starting FIF backend on http://localhost:5000')
     app.run(debug=False, port=5000)

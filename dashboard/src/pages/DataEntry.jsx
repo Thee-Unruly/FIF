@@ -131,52 +131,54 @@ export default function DataEntry({ data }) {
         setPage(1)
     }
 
-    const handleSave = (form) => {
+    const handleSave = async (form) => {
+        const record = {
+            id:          `${form.product}-${form.segment || ''}-${form.month}`,
+            month:       form.month,
+            label:       form.month,
+            product:     form.product,
+            segment:     form.segment,
+            telco:       form.telco,
+            custBase:    Number(form.custBase) || 0,
+            disbVal:     Number(form.disbVal) || 0,
+            disbVol:     Number(form.disbVol) || 0,
+            avgTicket:   Number(form.avgTicket) || 0,
+            repayVal:    Number(form.repayVal) || 0,
+            repayRate:   Number(form.repayRate) || 0,
+            outstanding: Number(form.outstanding) || 0,
+            due:         Number(form.due) || 0,
+        }
+
+        // Update UI immediately (optimistic)
         if (editRow) {
-            // Update existing row
-            setRows(rs => rs.map(r => r.id === editRow.id ? {
-                ...r,
-                month: form.month,
-                label: form.month, // simplified
-                product: form.product,
-                segment: form.segment,
-                telco: form.telco,
-                custBase: Number(form.custBase) || 0,
-                disbVal: Number(form.disbVal) || 0,
-                disbVol: Number(form.disbVol) || 0,
-                avgTicket: Number(form.avgTicket) || 0,
-                repayVal: Number(form.repayVal) || 0,
-                repayRate: Number(form.repayRate) || 0,
-                outstanding: Number(form.outstanding) || 0,
-                due: Number(form.due) || 0,
-            } : r))
+            setRows(rs => rs.map(r => r.id === editRow.id ? { ...r, ...record, id: editRow.id } : r))
         } else {
-            // Add new row
-            const newRow = {
-                id: `${form.product}-${form.segment}-${form.month}`,
-                month: form.month,
-                label: form.month,
-                product: form.product,
-                segment: form.segment,
-                telco: form.telco,
-                custBase: Number(form.custBase) || 0,
-                disbVal: Number(form.disbVal) || 0,
-                disbVol: Number(form.disbVol) || 0,
-                avgTicket: Number(form.avgTicket) || 0,
-                repayVal: Number(form.repayVal) || 0,
-                repayRate: Number(form.repayRate) || 0,
-                outstanding: Number(form.outstanding) || 0,
-                due: Number(form.due) || 0,
-            }
-            setRows(rs => [newRow, ...rs])
+            setRows(rs => [record, ...rs])
         }
         setEditRow(null)
+
+        // Persist to backend
+        try {
+            await fetch('/api/records', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(record),
+            })
+        } catch (e) {
+            console.warn('Save to backend failed (data kept locally):', e.message)
+        }
     }
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         setRows(rs => rs.filter(r => r.id !== deleteId))
         setDeleteId(null)
         if (page > totalPages) setPage(totalPages)
+        // Remove from backend too (only affects manually added records)
+        try {
+            await fetch(`/api/records/${encodeURIComponent(deleteId)}`, { method: 'DELETE' })
+        } catch (e) {
+            console.warn('Delete from backend failed:', e.message)
+        }
     }
 
     const handleExport = () => {
