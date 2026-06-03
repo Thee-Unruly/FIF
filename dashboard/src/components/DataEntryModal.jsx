@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { X, Save, ChevronDown } from 'lucide-react'
 
 const PRODUCTS = ['FIF', 'Bridge']
 const SEGMENTS = ['Individuals', 'Groups']
 const TELCOS = ['All', 'Airtel', 'Telkom']
+
+// Map focusSection → human-readable title for the modal subtitle
+const SECTION_LABELS = {
+    disbursements: 'Disbursements',
+    repayments:    'Repayments & Performance',
+    savings:       'Savings',
+    null:          'Full Monthly Record',
+}
 
 function Field({ label, children }) {
     return (
@@ -41,55 +49,46 @@ function Select({ options, ...props }) {
 
 export default function DataEntryModal({ onClose, onSave, initialData = null, focusSection = null }) {
     const isEdit = !!initialData
-    const sectionRefs = {
-        savings: useRef(null),
-        disbursements: useRef(null),
-        repayments: useRef(null),
-        performance: useRef(null),
-        interest: useRef(null),
-    }
-
-    useEffect(() => {
-        if (focusSection && sectionRefs[focusSection]?.current) {
-            setTimeout(() => {
-                sectionRefs[focusSection].current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }, 120)
-        }
-    }, [focusSection])
-    const highlight = (key) =>
-        focusSection === key
-            ? 'rounded-xl ring-2 ring-blue-400 ring-offset-2 p-2 -mx-2'
-            : ''
 
     const [form, setForm] = useState({
-        month: initialData?.month ?? '',
-        product: initialData?.product ?? 'FIF',
-        segment: initialData?.segment ?? 'Individuals',
-        telco: initialData?.telco ?? 'All',
-        custBase: initialData?.custBase ?? '',
-        mandatorySvgs: initialData?.mandatorySvgs ?? '',
-        disbVol: initialData?.disbVol ?? '',
-        disbVal: initialData?.disbVal ?? '',
-        disbCust: initialData?.disbCust ?? '',
-        avgTicket: initialData?.avgTicket ?? '',
-        repayVol: initialData?.repayVol ?? '',
-        repayVal: initialData?.repayVal ?? '',
-        repayCust: initialData?.repayCust ?? '',
-        due: initialData?.due ?? '',
-        outstanding: initialData?.outstanding ?? '',
-        repayRate: initialData?.repayRate ?? '',
+        month:          initialData?.month ?? '',
+        product:        initialData?.product ?? 'FIF',
+        segment:        initialData?.segment ?? 'Individuals',
+        telco:          initialData?.telco ?? 'All',
+        custBase:       initialData?.custBase ?? '',
+        mandatorySvgs:  initialData?.mandatorySvgs ?? '',
+        disbVol:        initialData?.disbVol ?? '',
+        disbVal:        initialData?.disbVal ?? '',
+        disbCust:       initialData?.disbCust ?? '',
+        avgTicket:      initialData?.avgTicket ?? '',
+        repayVol:       initialData?.repayVol ?? '',
+        repayVal:       initialData?.repayVal ?? '',
+        repayCust:      initialData?.repayCust ?? '',
+        due:            initialData?.due ?? '',
+        outstanding:    initialData?.outstanding ?? '',
+        repayRate:      initialData?.repayRate ?? '',
         interestAccrued: initialData?.interestAccrued ?? '',
-        interestPaid: initialData?.interestPaid ?? '',
+        interestPaid:   initialData?.interestPaid ?? '',
     })
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
     const handleSave = () => {
-        // Basic validation
         if (!form.month) return alert('Please enter a month (YYYYMM)')
         onSave(form)
         onClose()
     }
+
+    // Determine which sections to show
+    const show = {
+        savings:     !focusSection || focusSection === 'savings',
+        disb:        !focusSection || focusSection === 'disbursements',
+        repayments:  !focusSection || focusSection === 'repayments',
+        performance: !focusSection || focusSection === 'repayments',
+        interest:    !focusSection || focusSection === 'repayments',
+    }
+
+    const sectionLabel = SECTION_LABELS[focusSection] ?? 'Full Monthly Record'
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -97,8 +96,12 @@ export default function DataEntryModal({ onClose, onSave, initialData = null, fo
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
                     <div>
-                        <h2 className="text-base font-bold text-slate-800">{isEdit ? 'Edit Record' : 'Add Monthly Record'}</h2>
-                        <p className="text-xs text-slate-400 mt-0.5">{isEdit ? `Editing: ${initialData.month}` : 'Enter data for a new reporting period'}</p>
+                        <h2 className="text-base font-bold text-slate-800">
+                            {isEdit ? 'Edit Record' : `Add ${sectionLabel} Record`}
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            {isEdit ? `Editing: ${initialData.month}` : 'Enter data for a new reporting period'}
+                        </p>
                     </div>
                     <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
                         <X size={18} className="text-slate-500" />
@@ -106,7 +109,7 @@ export default function DataEntryModal({ onClose, onSave, initialData = null, fo
                 </div>
 
                 <div className="px-6 py-5 flex flex-col gap-6">
-                    {/* Period & Segment */}
+                    {/* Period & Segment — always shown */}
                     <section>
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Period & Segment</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -125,82 +128,92 @@ export default function DataEntryModal({ onClose, onSave, initialData = null, fo
                         </div>
                     </section>
 
-                    {/* Customer Base & Savings */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Customers & Savings</h3>
-                        <div ref={sectionRefs.savings} className={`grid grid-cols-2 gap-4 ${highlight('savings')}`}>
-                            <Field label="Customer Base (Opt-ins)">
-                                <Input type="number" placeholder="e.g. 1200000" value={form.custBase} onChange={set('custBase')} />
-                            </Field>
-                            <Field label="Mandatory Savings (Mn KES)">
-                                <Input type="number" placeholder="e.g. 590.5" value={form.mandatorySvgs} onChange={set('mandatorySvgs')} />
-                            </Field>
-                        </div>
-                    </section>
+                    {/* Customers & Savings */}
+                    {show.savings && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Customers & Savings</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Customer Base (Opt-ins)">
+                                    <Input type="number" placeholder="e.g. 1200000" value={form.custBase} onChange={set('custBase')} />
+                                </Field>
+                                <Field label="Mandatory Savings (Mn KES)">
+                                    <Input type="number" placeholder="e.g. 590.5" value={form.mandatorySvgs} onChange={set('mandatorySvgs')} />
+                                </Field>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Disbursements */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Disbursements</h3>
-                        <div ref={sectionRefs.disbursements} className={`grid grid-cols-2 gap-4 ${highlight('disbursements')}`}>
-                            <Field label="Volume (# loans)">
-                                <Input type="number" placeholder="e.g. 12500000" value={form.disbVol} onChange={set('disbVol')} />
-                            </Field>
-                            <Field label="Value (KES)">
-                                <Input type="number" placeholder="e.g. 10000000000" value={form.disbVal} onChange={set('disbVal')} />
-                            </Field>
-                            <Field label="Customer Count">
-                                <Input type="number" placeholder="e.g. 10000000" value={form.disbCust} onChange={set('disbCust')} />
-                            </Field>
-                            <Field label="Avg Ticket Size (KES)">
-                                <Input type="number" placeholder="e.g. 800" value={form.avgTicket} onChange={set('avgTicket')} />
-                            </Field>
-                        </div>
-                    </section>
+                    {show.disb && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Disbursements</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Volume (# loans)">
+                                    <Input type="number" placeholder="e.g. 12500000" value={form.disbVol} onChange={set('disbVol')} />
+                                </Field>
+                                <Field label="Value (KES)">
+                                    <Input type="number" placeholder="e.g. 10000000000" value={form.disbVal} onChange={set('disbVal')} />
+                                </Field>
+                                <Field label="Customer Count">
+                                    <Input type="number" placeholder="e.g. 10000000" value={form.disbCust} onChange={set('disbCust')} />
+                                </Field>
+                                <Field label="Avg Ticket Size (KES)">
+                                    <Input type="number" placeholder="e.g. 800" value={form.avgTicket} onChange={set('avgTicket')} />
+                                </Field>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Repayments */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Repayments</h3>
-                        <div ref={sectionRefs.repayments} className={`grid grid-cols-2 gap-4 ${highlight('repayments')}`}>
-                            <Field label="Volume (# repayments)">
-                                <Input type="number" placeholder="e.g. 14000000" value={form.repayVol} onChange={set('repayVol')} />
-                            </Field>
-                            <Field label="Value (KES)">
-                                <Input type="number" placeholder="e.g. 9000000000" value={form.repayVal} onChange={set('repayVal')} />
-                            </Field>
-                            <Field label="Customer Count">
-                                <Input type="number" placeholder="e.g. 9300000" value={form.repayCust} onChange={set('repayCust')} />
-                            </Field>
-                            <Field label="Collection Rate (0–1)">
-                                <Input type="number" step="0.0001" placeholder="e.g. 0.9312" value={form.repayRate} onChange={set('repayRate')} />
-                            </Field>
-                        </div>
-                    </section>
+                    {show.repayments && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Repayments</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Volume (# repayments)">
+                                    <Input type="number" placeholder="e.g. 14000000" value={form.repayVol} onChange={set('repayVol')} />
+                                </Field>
+                                <Field label="Value (KES)">
+                                    <Input type="number" placeholder="e.g. 9000000000" value={form.repayVal} onChange={set('repayVal')} />
+                                </Field>
+                                <Field label="Customer Count">
+                                    <Input type="number" placeholder="e.g. 9300000" value={form.repayCust} onChange={set('repayCust')} />
+                                </Field>
+                                <Field label="Collection Rate (0–1)">
+                                    <Input type="number" step="0.0001" placeholder="e.g. 0.9312" value={form.repayRate} onChange={set('repayRate')} />
+                                </Field>
+                            </div>
+                        </section>
+                    )}
 
-                    {/* Performance */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Loan Performance</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Field label="Amount Due (Mn KES)">
-                                <Input type="number" placeholder="e.g. 9011.1" value={form.due} onChange={set('due')} />
-                            </Field>
-                            <Field label="Outstanding (Mn KES)">
-                                <Input type="number" placeholder="e.g. 779.0" value={form.outstanding} onChange={set('outstanding')} />
-                            </Field>
-                        </div>
-                    </section>
+                    {/* Loan Performance */}
+                    {show.performance && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Loan Performance</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Amount Due (Mn KES)">
+                                    <Input type="number" placeholder="e.g. 9011.1" value={form.due} onChange={set('due')} />
+                                </Field>
+                                <Field label="Outstanding (Mn KES)">
+                                    <Input type="number" placeholder="e.g. 779.0" value={form.outstanding} onChange={set('outstanding')} />
+                                </Field>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Interest & Penalty */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Interest & Penalty</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Field label="Accrued (KES)">
-                                <Input type="number" placeholder="e.g. 1234567890" value={form.interestAccrued} onChange={set('interestAccrued')} />
-                            </Field>
-                            <Field label="Paid (KES)">
-                                <Input type="number" placeholder="e.g. 1123456789" value={form.interestPaid} onChange={set('interestPaid')} />
-                            </Field>
-                        </div>
-                    </section>
+                    {show.interest && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Interest & Penalty</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Accrued (KES)">
+                                    <Input type="number" placeholder="e.g. 1234567890" value={form.interestAccrued} onChange={set('interestAccrued')} />
+                                </Field>
+                                <Field label="Paid (KES)">
+                                    <Input type="number" placeholder="e.g. 1123456789" value={form.interestPaid} onChange={set('interestPaid')} />
+                                </Field>
+                            </div>
+                        </section>
+                    )}
                 </div>
 
                 {/* Footer */}
