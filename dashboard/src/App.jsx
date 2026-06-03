@@ -25,9 +25,38 @@ function App() {
 
   const { data, loading } = useFifData()
 
-  const handleSave = (record) => {
-    console.log('New record:', record)
-    // Future: POST to backend
+  const handleSave = async (form) => {
+    const record = {
+      month: form.month,
+      label: form.month,
+      product: form.product,
+      segment: form.segment,
+      telco: form.telco,
+      custBase: Number(form.custBase) || 0,
+      mandatorySvgs: Number(form.mandatorySvgs) || 0,
+      disbVal: Number(form.disbVal) || 0,
+      disbVol: Number(form.disbVol) || 0,
+      disbCust: Number(form.disbCust) || 0,
+      avgTicket: Number(form.avgTicket) || 0,
+      repayVal: Number(form.repayVal) || 0,
+      repayVol: Number(form.repayVol) || 0,
+      repayCust: Number(form.repayCust) || 0,
+      repayRate: Number(form.repayRate) || 0,
+      outstanding: Number(form.outstanding) || 0,
+      due: Number(form.due) || 0,
+      interestAccrued: Number(form.interestAccrued) || 0,
+      interestPaid: Number(form.interestPaid) || 0,
+    }
+    try {
+      const res = await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record),
+      })
+      if (!res.ok) console.error('Save failed:', await res.text())
+    } catch (e) {
+      console.error('Save error:', e)
+    }
   }
 
   const renderPage = () => {

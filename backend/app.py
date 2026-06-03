@@ -7,14 +7,43 @@ from flask_cors import CORS
 import openpyxl
 from pathlib import Path
 import re
+import os
+import shutil
 
 app = Flask(__name__)
 CORS(app)
 
-BASE = Path(__file__).parent.parent  # FIF folder
-FIF_FILE   = BASE / 'Financial Inclusion Fund-End of March  2026.xlsx'
-BRIDGE_FILE = BASE / 'Bridge End Month of March 2026.xlsx'
-TELCO_FILE  = BASE / 'Financial Inlcusion Fund-End of March 2026 {Airtel  Telkom } - Individual (1).xlsx'
+# In production (Railway), set DATA_DIR=/data (persistent volume).
+# In dev, defaults to the FIF folder where the Excel files live.
+_REPO_BASE = Path(__file__).parent.parent
+DATA_DIR   = Path(os.environ.get('DATA_DIR', str(_REPO_BASE)))
+
+FIF_FILE    = DATA_DIR / 'Financial Inclusion Fund-End of March  2026.xlsx'
+BRIDGE_FILE = DATA_DIR / 'Bridge End Month of March 2026.xlsx'
+TELCO_FILE  = DATA_DIR / 'Financial Inlcusion Fund-End of March 2026 {Airtel  Telkom } - Individual (1).xlsx'
+
+_EXCEL_FILES = [
+    'Financial Inclusion Fund-End of March  2026.xlsx',
+    'Bridge End Month of March 2026.xlsx',
+    'Financial Inlcusion Fund-End of March 2026 {Airtel  Telkom } - Individual (1).xlsx',
+]
+
+def _init_data_dir():
+    """On first deploy copy Excel files from repo image → persistent volume."""
+    if DATA_DIR == _REPO_BASE:
+        return  # dev: files already in place
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    for fname in _EXCEL_FILES:
+        dest = DATA_DIR / fname
+        if not dest.exists():
+            src = _REPO_BASE / fname
+            if src.exists():
+                shutil.copy2(src, dest)
+                print(f'[init] Copied {fname} → {DATA_DIR}')
+            else:
+                print(f'[init] WARNING: source not found: {src}')
+
+_init_data_dir()
 
 MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
