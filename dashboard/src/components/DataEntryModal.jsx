@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Save, ChevronDown } from 'lucide-react'
 
 const PRODUCTS = ['FIF', 'Bridge']
@@ -39,8 +39,28 @@ function Select({ options, ...props }) {
     )
 }
 
-export default function DataEntryModal({ onClose, onSave, initialData = null }) {
+export default function DataEntryModal({ onClose, onSave, initialData = null, focusSection = null }) {
     const isEdit = !!initialData
+    const sectionRefs = {
+        savings: useRef(null),
+        disbursements: useRef(null),
+        repayments: useRef(null),
+        performance: useRef(null),
+        interest: useRef(null),
+    }
+
+    useEffect(() => {
+        if (focusSection && sectionRefs[focusSection]?.current) {
+            setTimeout(() => {
+                sectionRefs[focusSection].current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }, 120)
+        }
+    }, [focusSection])
+    const highlight = (key) =>
+        focusSection === key
+            ? 'rounded-xl ring-2 ring-blue-400 ring-offset-2 p-2 -mx-2'
+            : ''
+
     const [form, setForm] = useState({
         month: initialData?.month ?? '',
         product: initialData?.product ?? 'FIF',
@@ -108,7 +128,7 @@ export default function DataEntryModal({ onClose, onSave, initialData = null }) 
                     {/* Customer Base & Savings */}
                     <section>
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Customers & Savings</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div ref={sectionRefs.savings} className={`grid grid-cols-2 gap-4 ${highlight('savings')}`}>
                             <Field label="Customer Base (Opt-ins)">
                                 <Input type="number" placeholder="e.g. 1200000" value={form.custBase} onChange={set('custBase')} />
                             </Field>
@@ -121,7 +141,7 @@ export default function DataEntryModal({ onClose, onSave, initialData = null }) 
                     {/* Disbursements */}
                     <section>
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Disbursements</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div ref={sectionRefs.disbursements} className={`grid grid-cols-2 gap-4 ${highlight('disbursements')}`}>
                             <Field label="Volume (# loans)">
                                 <Input type="number" placeholder="e.g. 12500000" value={form.disbVol} onChange={set('disbVol')} />
                             </Field>
@@ -140,7 +160,7 @@ export default function DataEntryModal({ onClose, onSave, initialData = null }) 
                     {/* Repayments */}
                     <section>
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Repayments</h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div ref={sectionRefs.repayments} className={`grid grid-cols-2 gap-4 ${highlight('repayments')}`}>
                             <Field label="Volume (# repayments)">
                                 <Input type="number" placeholder="e.g. 14000000" value={form.repayVol} onChange={set('repayVol')} />
                             </Field>

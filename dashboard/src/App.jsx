@@ -86,7 +86,16 @@ function App() {
       </div>
 
       {showEntry && (
-        <DataEntryModal onClose={() => setShowEntry(false)} onSave={handleSave} />
+        <DataEntryModal
+          onClose={() => setShowEntry(false)}
+          onSave={handleSave}
+          focusSection={
+            page === 'disbursements' ? 'disbursements' :
+              page === 'repayments' ? 'repayments' :
+                page === 'savings' ? 'savings' :
+                  null
+          }
+        />
       )}
     </div>
   )
