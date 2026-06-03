@@ -175,7 +175,7 @@ export default function DataEntry({ data }) {
             console.log('POST response status:', postRes.status)
             const postBody = await postRes.json()
             console.log('POST response:', postBody)
-            
+
             // Refresh data from API after successful save
             const [fifRes, bridgeRes] = await Promise.all([
                 fetch('/api/monthly?product=FIF'),
@@ -184,12 +184,13 @@ export default function DataEntry({ data }) {
             const fifData = await fifRes.json()
             const bridgeData = await bridgeRes.json()
             console.log('Refreshed data: FIF rows =', fifData.length, ', Bridge rows =', bridgeData.length)
-            
+
             // Rebuild rows with fresh data
             const newRows = buildRows(fifData, bridgeData)
             setRows(newRows)
         } catch (e) {
             console.error('Save or refresh failed:', e)
+        }
     }
 
     const handleDeleteConfirm = async () => {
