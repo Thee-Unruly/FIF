@@ -8,9 +8,9 @@ const TELCOS = ['All', 'Airtel', 'Telkom']
 // Map focusSection → human-readable title for the modal subtitle
 const SECTION_LABELS = {
     disbursements: 'Disbursements',
-    repayments:    'Repayments & Performance',
-    savings:       'Savings',
-    null:          'Full Monthly Record',
+    repayments: 'Repayments & Performance',
+    savings: 'Savings',
+    null: 'Full Monthly Record',
 }
 
 function Field({ label, children }) {
@@ -51,24 +51,24 @@ export default function DataEntryModal({ onClose, onSave, initialData = null, fo
     const isEdit = !!initialData
 
     const [form, setForm] = useState({
-        month:          initialData?.month ?? '',
-        product:        initialData?.product ?? 'FIF',
-        segment:        initialData?.segment ?? 'Individuals',
-        telco:          initialData?.telco ?? 'All',
-        custBase:       initialData?.custBase ?? '',
-        mandatorySvgs:  initialData?.mandatorySvgs ?? '',
-        disbVol:        initialData?.disbVol ?? '',
-        disbVal:        initialData?.disbVal ?? '',
-        disbCust:       initialData?.disbCust ?? '',
-        avgTicket:      initialData?.avgTicket ?? '',
-        repayVol:       initialData?.repayVol ?? '',
-        repayVal:       initialData?.repayVal ?? '',
-        repayCust:      initialData?.repayCust ?? '',
-        due:            initialData?.due ?? '',
-        outstanding:    initialData?.outstanding ?? '',
-        repayRate:      initialData?.repayRate ?? '',
+        month: initialData?.month ?? '',
+        product: initialData?.product ?? 'FIF',
+        segment: initialData?.segment ?? 'Individuals',
+        telco: initialData?.telco ?? 'All',
+        custBase: initialData?.custBase ?? '',
+        mandatorySvgs: initialData?.mandatorySvgs ?? '',
+        disbVol: initialData?.disbVol ?? '',
+        disbVal: initialData?.disbVal ?? '',
+        disbCust: initialData?.disbCust ?? '',
+        avgTicket: initialData?.avgTicket ?? '',
+        repayVol: initialData?.repayVol ?? '',
+        repayVal: initialData?.repayVal ?? '',
+        repayCust: initialData?.repayCust ?? '',
+        due: initialData?.due ?? '',
+        outstanding: initialData?.outstanding ?? '',
+        repayRate: initialData?.repayRate ?? '',
         interestAccrued: initialData?.interestAccrued ?? '',
-        interestPaid:   initialData?.interestPaid ?? '',
+        interestPaid: initialData?.interestPaid ?? '',
     })
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -81,11 +81,11 @@ export default function DataEntryModal({ onClose, onSave, initialData = null, fo
 
     // Determine which sections to show
     const show = {
-        savings:     !focusSection || focusSection === 'savings',
-        disb:        !focusSection || focusSection === 'disbursements',
-        repayments:  !focusSection || focusSection === 'repayments',
+        savings: !focusSection || focusSection === 'savings',
+        disb: !focusSection || focusSection === 'disbursements',
+        repayments: !focusSection || focusSection === 'repayments',
         performance: !focusSection || focusSection === 'repayments',
-        interest:    !focusSection || focusSection === 'repayments',
+        interest: !focusSection || focusSection === 'repayments',
     }
 
     const sectionLabel = SECTION_LABELS[focusSection] ?? 'Full Monthly Record'

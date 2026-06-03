@@ -210,65 +210,96 @@ def savings():
     return jsonify(rows)
 
 
-# In-memory store for records added via the dashboard UI
-# (persisted for the lifetime of the server process)
-_added_records = []
+def append_to_excel(filepath, record, svgs_factor=1_000_000):
+    """
+    Append a new row to the Monthly Summary sheet of an Excel file.
+    Form values:  mandatorySvgs in Mn, due in Mn, outstanding in Mn, disbVal/repayVal in raw KES.
+    Excel stores: mandatorySvgs in Mn for FIF (÷1M already), raw KES for Bridge (×1M).
+                  due and outstanding always in Mn.
+    svgs_factor: 1_000_000 = FIF (store as Mn), 1 = Bridge (store raw KES → multiply back)
+    """
+    wb = openpyxl.load_workbook(filepath, data_only=False)
+    ws = wb['Monthly Summary']
 
-@app.route('/api/records', methods=['GET'])
-def get_records():
-    """Return all manually added records."""
-    return jsonify(_added_records)
+    # Find first empty row after data (scan column B for last filled row)
+    last_row = ws.max_row
+    while last_row > 4 and ws.cell(last_row, 2).value in (None, ''):
+        last_row -= 1
+    new_row = last_row + 1
+
+    month_int = int(str(record['month']).strip())
+    # For Bridge, mandatory savings is stored raw KES in Excel; for FIF it's stored as Mn
+    svgs_excel = record['mandatorySvgs'] / svgs_factor  # Mn → Mn (FIF) or Mn → raw KES (Bridge ×1M ÷1=Mn? No)
+    # Actually: user enters Mn. FIF Excel stores Mn → write as-is (factor=1M means divide by 1M? No…)
+    # read_monthly multiplies row[3] * svgs_factor to get KES.
+    # So Excel value = KES_value / svgs_factor
+    # User entered Mn → KES = user_Mn * 1_000_000 → Excel = (user_Mn * 1_000_000) / svgs_factor
+    svgs_excel = (record['mandatorySvgs'] * 1_000_000) / svgs_factor
+
+    ws.cell(new_row, 2).value  = month_int
+    ws.cell(new_row, 3).value  = record['custBase']
+    ws.cell(new_row, 4).value  = svgs_excel
+    ws.cell(new_row, 5).value  = record['disbVol']
+    ws.cell(new_row, 6).value  = record['disbVal']
+    ws.cell(new_row, 7).value  = record['disbCust']
+    ws.cell(new_row, 8).value  = record['avgTicket']
+    ws.cell(new_row, 9).value  = record['repayVol']
+    ws.cell(new_row, 10).value = record['repayVal']
+    ws.cell(new_row, 11).value = record['repayCust']
+    ws.cell(new_row, 12).value = record['due']         # already Mn
+    ws.cell(new_row, 13).value = record['outstanding']  # already Mn
+    ws.cell(new_row, 14).value = record['repayRate']
+
+    wb.save(filepath)
+    wb.close()
 
 
 @app.route('/api/records', methods=['POST'])
 def create_record():
-    """Accept a new monthly record from the dashboard and hold it in memory."""
+    """Accept a new monthly record and write it to the appropriate Excel file."""
     body = request.get_json(force=True, silent=True)
+    print(f'[POST /api/records] Received: {body}')  # Log for debugging
+    
     if not body:
         return jsonify({'error': 'Invalid JSON'}), 400
-
-    required = ['month', 'product']
-    for field in required:
-        if not body.get(field):
-            return jsonify({'error': f'Missing field: {field}'}), 400
+    if not body.get('month') or not body.get('product'):
+        return jsonify({'error': 'month and product are required'}), 400
 
     record = {
-        'id':          f"{body['product']}-{body.get('segment','')}-{body['month']}",
-        'month':       str(body.get('month', '')),
-        'label':       body.get('label', body.get('month', '')),
-        'product':     body.get('product', ''),
-        'segment':     body.get('segment', ''),
+        'month':       str(body.get('month', '')).strip(),
+        'product':     body.get('product', 'FIF').upper(),
+        'segment':     body.get('segment', 'Individuals'),
         'telco':       body.get('telco', 'All'),
         'custBase':    float(body.get('custBase') or 0),
-        'disbVal':     float(body.get('disbVal') or 0),
-        'disbVol':     float(body.get('disbVol') or 0),
-        'avgTicket':   float(body.get('avgTicket') or 0),
-        'repayVal':    float(body.get('repayVal') or 0),
-        'repayRate':   float(body.get('repayRate') or 0),
-        'outstanding': float(body.get('outstanding') or 0),
-        'due':         float(body.get('due') or 0),
         'mandatorySvgs': float(body.get('mandatorySvgs') or 0),
+        'disbVol':     float(body.get('disbVol') or 0),
+        'disbVal':     float(body.get('disbVal') or 0),
+        'disbCust':    float(body.get('disbCust') or 0),
+        'avgTicket':   float(body.get('avgTicket') or 0),
+        'repayVol':    float(body.get('repayVol') or 0),
+        'repayVal':    float(body.get('repayVal') or 0),
+        'repayCust':   float(body.get('repayCust') or 0),
+        'repayRate':   float(body.get('repayRate') or 0),
+        'due':         float(body.get('due') or 0),
+        'outstanding': float(body.get('outstanding') or 0),
     }
 
-    # Update existing if same id, else append
-    for i, r in enumerate(_added_records):
-        if r['id'] == record['id']:
-            _added_records[i] = record
-            return jsonify({'status': 'updated', 'record': record})
-
-    _added_records.append(record)
-    return jsonify({'status': 'created', 'record': record}), 201
+    try:
+        if record['product'] == 'BRIDGE':
+            append_to_excel(BRIDGE_FILE, record, svgs_factor=1)
+        else:
+            append_to_excel(FIF_FILE, record, svgs_factor=1_000_000)
+        print(f'[POST /api/records] ✓ Saved successfully: {record["month"]}, {record["product"]}')
+        return jsonify({'status': 'saved', 'month': record['month']}), 201
+    except Exception as e:
+        print(f'[POST /api/records] ✗ Error: {str(e)}')
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/records/<record_id>', methods=['DELETE'])
 def delete_record(record_id):
-    """Delete a manually added record by id."""
-    global _added_records
-    before = len(_added_records)
-    _added_records = [r for r in _added_records if r['id'] != record_id]
-    if len(_added_records) < before:
-        return jsonify({'status': 'deleted'})
-    return jsonify({'error': 'Not found'}), 404
+    """Placeholder — deleting from Excel is not supported via API."""
+    return jsonify({'status': 'ignored', 'note': 'Deletes are local only; Excel is not modified'}), 200
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://fif-production.up.railway.app',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },

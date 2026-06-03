@@ -132,22 +132,30 @@ export default function DataEntry({ data }) {
     }
 
     const handleSave = async (form) => {
+        console.log('handleSave called with form:', form)
         const record = {
-            id:          `${form.product}-${form.segment || ''}-${form.month}`,
-            month:       form.month,
-            label:       form.month,
-            product:     form.product,
-            segment:     form.segment,
-            telco:       form.telco,
-            custBase:    Number(form.custBase) || 0,
-            disbVal:     Number(form.disbVal) || 0,
-            disbVol:     Number(form.disbVol) || 0,
-            avgTicket:   Number(form.avgTicket) || 0,
-            repayVal:    Number(form.repayVal) || 0,
-            repayRate:   Number(form.repayRate) || 0,
+            id: `${form.product}-${form.segment || ''}-${form.month}`,
+            month: form.month,
+            label: form.month,
+            product: form.product,
+            segment: form.segment,
+            telco: form.telco,
+            custBase: Number(form.custBase) || 0,
+            mandatorySvgs: Number(form.mandatorySvgs) || 0,
+            disbVal: Number(form.disbVal) || 0,
+            disbVol: Number(form.disbVol) || 0,
+            disbCust: Number(form.disbCust) || 0,
+            avgTicket: Number(form.avgTicket) || 0,
+            repayVal: Number(form.repayVal) || 0,
+            repayVol: Number(form.repayVol) || 0,
+            repayCust: Number(form.repayCust) || 0,
+            repayRate: Number(form.repayRate) || 0,
             outstanding: Number(form.outstanding) || 0,
-            due:         Number(form.due) || 0,
+            due: Number(form.due) || 0,
+            interestAccrued: Number(form.interestAccrued) || 0,
+            interestPaid: Number(form.interestPaid) || 0,
         }
+        console.log('Posting record:', record)
 
         // Update UI immediately (optimistic)
         if (editRow) {
@@ -157,16 +165,31 @@ export default function DataEntry({ data }) {
         }
         setEditRow(null)
 
-        // Persist to backend
+        // Persist to backend and refresh data
         try {
-            await fetch('/api/records', {
+            const postRes = await fetch('/api/records', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(record),
             })
+            console.log('POST response status:', postRes.status)
+            const postBody = await postRes.json()
+            console.log('POST response:', postBody)
+            
+            // Refresh data from API after successful save
+            const [fifRes, bridgeRes] = await Promise.all([
+                fetch('/api/monthly?product=FIF'),
+                fetch('/api/monthly?product=Bridge'),
+            ])
+            const fifData = await fifRes.json()
+            const bridgeData = await bridgeRes.json()
+            console.log('Refreshed data: FIF rows =', fifData.length, ', Bridge rows =', bridgeData.length)
+            
+            // Rebuild rows with fresh data
+            const newRows = buildRows(fifData, bridgeData)
+            setRows(newRows)
         } catch (e) {
-            console.warn('Save to backend failed (data kept locally):', e.message)
-        }
+            console.error('Save or refresh failed:', e)
     }
 
     const handleDeleteConfirm = async () => {
