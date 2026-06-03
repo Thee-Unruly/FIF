@@ -23,7 +23,7 @@ function App() {
     toMonth: '2026-03',
   })
 
-  const { data, loading } = useFifData()
+  const { data, loading, refresh } = useFifData()
 
   const handleSave = async (form) => {
     const record = {
@@ -57,6 +57,7 @@ function App() {
     } catch (e) {
       console.error('Save error:', e)
     }
+    refresh()
   }
 
   const renderPage = () => {
@@ -71,7 +72,7 @@ function App() {
       case 'disbursements': return <Disbursements filters={filters} data={data} />
       case 'repayments': return <Repayments filters={filters} data={data} />
       case 'savings': return <Savings filters={filters} data={data} />
-      case 'data': return <DataEntry data={data} />
+      case 'data': return <DataEntry data={data} onRefresh={refresh} />
       default: return (
         <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
           Page coming soon

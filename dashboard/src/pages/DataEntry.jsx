@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Search, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download } from 'lucide-react'
 import DataEntryModal from '../components/DataEntryModal'
 import { monthlyData as mockMonthlyData, bridgeMonthlyData as mockBridgeMonthlyData } from '../data/mockData'
@@ -86,11 +86,19 @@ function BadgeProduct({ v }) {
     return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{v}</span>
 }
 
-export default function DataEntry({ data }) {
+export default function DataEntry({ data, onRefresh }) {
     const monthlyData = data?.monthlyData ?? mockMonthlyData
     const bridgeMonthlyData = data?.bridgeMonthlyData ?? mockBridgeMonthlyData
 
     const [rows, setRows] = useState(() => buildRows(monthlyData, bridgeMonthlyData))
+
+    // Keep rows in sync whenever fresh data arrives (after save/refresh)
+    useEffect(() => {
+        setRows(buildRows(
+            data?.monthlyData ?? mockMonthlyData,
+            data?.bridgeMonthlyData ?? mockBridgeMonthlyData
+        ))
+    }, [data])
     const [search, setSearch] = useState('')
     const [productFilter, setProductFilter] = useState('All')
     const [sortKey, setSortKey] = useState('month')
@@ -165,31 +173,17 @@ export default function DataEntry({ data }) {
         }
         setEditRow(null)
 
-        // Persist to backend and refresh data
+        // Persist to backend then trigger global refresh
         try {
             const postRes = await fetch('/api/records', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(record),
             })
-            console.log('POST response status:', postRes.status)
-            const postBody = await postRes.json()
-            console.log('POST response:', postBody)
-
-            // Refresh data from API after successful save
-            const [fifRes, bridgeRes] = await Promise.all([
-                fetch('/api/monthly?product=FIF'),
-                fetch('/api/monthly?product=Bridge'),
-            ])
-            const fifData = await fifRes.json()
-            const bridgeData = await bridgeRes.json()
-            console.log('Refreshed data: FIF rows =', fifData.length, ', Bridge rows =', bridgeData.length)
-
-            // Rebuild rows with fresh data
-            const newRows = buildRows(fifData, bridgeData)
-            setRows(newRows)
+            if (!postRes.ok) throw new Error(`HTTP ${postRes.status}`)
+            if (onRefresh) onRefresh()
         } catch (e) {
-            console.error('Save or refresh failed:', e)
+            console.error('Save failed:', e)
         }
     }
 
