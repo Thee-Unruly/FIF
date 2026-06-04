@@ -11,7 +11,7 @@ import os
 import shutil
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": ["https://fif-tan.vercel.app"]}})
 
 # In production (Railway), set DATA_DIR=/data (persistent volume).
 # In dev, defaults to the FIF folder where the Excel files live.

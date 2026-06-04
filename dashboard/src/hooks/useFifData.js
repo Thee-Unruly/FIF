@@ -3,7 +3,7 @@
  * Falls back transparently to static mock data if the API is unavailable.
  */
 import { useState, useEffect } from 'react'
-import * as mock from '../data/mockData'
+// Mock data import removed – API only
 
 export function useFifData() {
     const [data, setData] = useState(null)
@@ -76,7 +76,7 @@ export function useFifData() {
                 const interestMonthlyData = interestData
 
                 // segmentMonthlyDisb not yet in API — use mock as fallback
-                const segmentMonthlyDisb = mock.segmentMonthlyDisb
+                const segmentMonthlyDisb = []
 
                 setData({
                     monthlyData,
@@ -91,19 +91,8 @@ export function useFifData() {
                 })
             } catch (err) {
                 if (!cancelled) {
-                    console.warn('[useFifData] API unavailable, using mock data:', err.message)
-                    setError(err.message)
-                    setData({
-                        monthlyData: mock.monthlyData,
-                        bridgeMonthlyData: mock.bridgeMonthlyData,
-                        currentKPIs: mock.currentKPIs,
-                        prevKPIs: mock.prevKPIs,
-                        interestMonthlyData: mock.interestMonthlyData,
-                        telcoMonthlyDisb: mock.telcoMonthlyDisb,
-                        segmentMonthlyDisb: mock.segmentMonthlyDisb,
-                        savingsMonthlyData: mock.savingsMonthlyData,
-                        source: 'mock',
-                    })
+                    console.error('[useFifData] API error:', err);
+                    setError(err.message);
                 }
             } finally {
                 if (!cancelled) setLoading(false)
