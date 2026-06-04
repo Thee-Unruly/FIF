@@ -85,11 +85,12 @@ def read_monthly(filepath, sheet='Monthly Summary', svgs_factor=1_000_000):
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     ws = wb[sheet]
     rows = []
+    seen = {}  # month → index in rows, to deduplicate (keep the row with larger disbVal)
     for row in ws.iter_rows(min_row=5, values_only=True):
         mnth = row[1]
         if not (mnth and isinstance(mnth, (int, float)) and int(mnth) > 200000):
             continue
-        rows.append({
+        entry = {
             'month':        str(int(mnth)),
             'label':        month_label(mnth),
             'custBase':     safe(row[2]),
@@ -104,7 +105,15 @@ def read_monthly(filepath, sheet='Monthly Summary', svgs_factor=1_000_000):
             'due':          safe(row[11]) * 1_000_000,
             'outstanding':  safe(row[12]) * 1_000_000,
             'repayRate':    safe(row[13]),
-        })
+        }
+        key = entry['month']
+        if key in seen:
+            # Keep whichever has the larger disbVal (prefer main data block over sub-segments)
+            if entry['disbVal'] > rows[seen[key]]['disbVal']:
+                rows[seen[key]] = entry
+        else:
+            seen[key] = len(rows)
+            rows.append(entry)
     wb.close()
     return rows
 
