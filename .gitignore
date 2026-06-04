@@ -26,3 +26,5 @@ venv/
 .claude/
 /venv
 /.claude
+.vercel
+.env*

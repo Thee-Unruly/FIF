@@ -19,13 +19,14 @@ export function useFifData() {
         async function load() {
             try {
                 // Fetch all endpoints in parallel
+                const BASE_URL = import.meta.env.VITE_API_URL;
                 const [fif, bridge, telco, interest, savings] = await Promise.all([
-                    fetch('/api/monthly?product=FIF'),
-                    fetch('/api/monthly?product=Bridge'),
-                    fetch('/api/telco'),
-                    fetch('/api/interest'),
-                    fetch('/api/savings'),
-                ])
+                    fetch(`${BASE_URL ? BASE_URL : ''}/api/monthly?product=FIF`),
+                    fetch(`${BASE_URL ? BASE_URL : ''}/api/monthly?product=Bridge`),
+                    fetch(`${BASE_URL ? BASE_URL : ''}/api/telco`),
+                    fetch(`${BASE_URL ? BASE_URL : ''}/api/interest`),
+                    fetch(`${BASE_URL ? BASE_URL : ''}/api/savings`),
+                ]);
 
                 if (!fif.ok) throw new Error(`API error: ${fif.status}`)
 
